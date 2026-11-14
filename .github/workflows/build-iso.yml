@@ -16,7 +16,7 @@ jobs:
         run: |
           mkdir -p out
           docker run --rm --privileged \
-            -v "${{ github.workspace }}:/build" \a
+            -v "${{ github.workspace }}:/build" \
             archlinux:latest bash -c "
               set -euo pipefail
               pacman-key --init
