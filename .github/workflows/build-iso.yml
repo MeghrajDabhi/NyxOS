@@ -16,11 +16,11 @@ jobs:
         run: |
           mkdir -p out
           docker run --rm --privileged \
-            -v "${{ github.workspace }}:/build" \
+            -v "${{ github.workspace }}:/build" \a
             archlinux:latest bash -c "
               set -euo pipefail
               pacman-key --init
-              pacman -Syu --noconfirm archiso
+              pacman -Syu --noconfirm archiso grub
               mkdir -p /tmp/profile
               cp -r /usr/share/archiso/configs/releng/. /tmp/profile/
               cp -r /build/nyxos-iso/. /tmp/profile/
