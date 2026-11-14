@@ -1,0 +1,36 @@
+name: Build NyxOS Bootable ISO
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile bootable ISO with archiso
+        run: |
+          mkdir -p out
+          docker run --rm --privileged \
+            -v "${{ github.workspace }}:/build" \
+            archlinux:latest bash -c "
+              set -euo pipefail
+              pacman-key --init
+              pacman -Syu --noconfirm archiso
+              mkdir -p /tmp/profile
+              cp -r /usr/share/archiso/configs/releng/. /tmp/profile/
+              cp -r /build/nyxos-iso/. /tmp/profile/
+              chmod +x /tmp/profile/profiledef.sh /tmp/profile/airootfs/usr/local/bin/nyxos-install
+              mkarchiso -v -w /tmp/work -o /build/out /tmp/profile
+            "
+
+      - name: Upload NyxOS .iso artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyxos-26.11-x86_64-iso
+          path: out/*.iso
+          if-no-files-found: error
