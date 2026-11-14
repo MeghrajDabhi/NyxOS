@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=== NyxOS 26.11 Disk Installer ==="
+echo "Available block devices:"
+lsblk -d -o NAME,SIZE,MODEL
+echo ""
+read -rp "Enter target disk (e.g. /dev/nvme0n1 or /dev/sda): " DISK
+
+if [[ ! -b "$DISK" ]]; then
+  echo "Error: $DISK is not a valid block device." >&2
+  exit 1
+fi
+
+read -rp "WARNING: All data on $DISK will be erased. Type YES to continue: " CONFIRM
+if [[ "$CONFIRM" != "YES" ]]; then
+  echo "Aborted."
+  exit 1
+fi
+
+parted -s "$DISK" mklabel gpt
+parted -s "$DISK" mkpart EFI fat32 1MiB 513MiB
+parted -s "$DISK" set 1 esp on
+parted -s "$DISK" mkpart ROOT ext4 513MiB 100%
+
+if [[ "$DISK" == *"nvme"* || "$DISK" == *"mmcblk"* ]]; then
+  EFI_PART="${DISK}p1"
+  ROOT_PART="${DISK}p2"
+else
+  EFI_PART="${DISK}1"
+  ROOT_PART="${DISK}2"
+fi
+
+mkfs.fat -F32 "$EFI_PART"
+mkfs.ext4 -F "$ROOT_PART"
+
+mount "$ROOT_PART" /mnt
+mkdir -p /mnt/boot/efi
+mount "$EFI_PART" /mnt/boot/efi
+
+pacstrap -K /mnt linux-zen linux-firmware base networkmanager hyprland waybar kitty sddm grub efibootmgr sudo
+genfstab -U /mnt >> /mnt/etc/fstab
+
+arch-chroot /mnt bash -c "
+  echo 'nyxos' > /etc/hostname
+  systemctl enable NetworkManager sddm
+  useradd -m -G wheel -s /bin/bash 'nyx'
+  echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=NyxOS
+  grub-mkconfig -o /boot/grub/grub.cfg
+"
+
+echo "NyxOS 26.11 installation complete! Reboot and remove your installation media."

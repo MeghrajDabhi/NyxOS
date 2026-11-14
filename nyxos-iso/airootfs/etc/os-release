@@ -1,0 +1,5 @@
+NAME="NyxOS Linux"
+PRETTY_NAME="NyxOS 26.11 Prism Edition"
+ID=nyxos
+ID_LIKE=arch
+BUILD_ID=26.11
